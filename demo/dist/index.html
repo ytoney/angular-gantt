@@ -8,6 +8,7 @@
     <!-- Place favicon.ico and apple-touch-icon.png in the root directory -->
     <link rel="stylesheet" href="styles/vendor.css">
     <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="../../assets/gantt.css">
   </head>
   <body ng-app="angularGanttDemoApp">
     <!--[if lt IE 7]>
@@ -158,8 +159,7 @@
                                                allow-task-row-switching="!options.readOnly"
                                                sort-mode="options.mode"
                                                view-scale="options.scale"
-                                               column-width="{minute: 40, hour: 40, day: 40, week: 150, month: 300, quarter: 500, year: 800}[options.scale]"
-                                               width="options.width && 160 || 0"
+                                               column-width="options.width && {minute: 40, hour: 40, day: 40, week: 150, month: 300, quarter: 500, year: 800}[options.scale] || undefined"
                                                auto-expand="options.autoExpand"
                                                task-out-of-range="options.taskOutOfRange"
                                                from-date = "options.fromDate"
@@ -189,7 +189,7 @@
             <div class="container-fluid">
                 <div class="row">
                     <div class="col-md-12">
-                        <small>angular-gantt (github master) - The gantt chart directive for AngularJS | MIT License | Copyright © 2014 Marco Schweighauser and Rémi Alvergnat</small>
+                        <small>angular-gantt (v0.7.0) - The gantt chart directive for AngularJS | MIT License | Copyright © 2014 Marco Schweighauser and Rémi Alvergnat</small>
                     </div>
                 </div>
             </div>
@@ -215,7 +215,7 @@
     <![endif]-->
 
     <script src="scripts/vendor.js"></script>
-
+    <script src="../../assets/angular-gantt.js"></script>
         <script src="scripts/scripts.js"></script>
 </body>
 </html>

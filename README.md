@@ -108,7 +108,7 @@ This will create a symbolic link in `demo/bower_components` pointing to your loc
 Then, run `grunt serve` from `demo` directory to run the demo.
 
 ### <a name="build"></a> Build
-1. Install (http://gruntjs.com/)(http://gruntjs.com/)
+1. Install [npm](https://www.npmjs.org/), [bower](http://bower.io/) and [grunt](http://gruntjs.com/)
 2. Run `npm install` to install node dependencies
 3. Run `bower install` to install bower dependencies
 4. Run `grunt` to build angular-gantt.js and angular-gantt.min.js
@@ -185,10 +185,12 @@ review those projects documentations.
   Take a look at demo files [demo/app/index.html](demo/app/index.html) and 
   [demo/app/scripts/controllers/main.js](demo/app/scripts/controllers/main.js) to see how this callback is used.
 
-- **column-width** (default `30`)
+- **column-width**
 
   How wide are the columns in `px`. This allows you add logic like `column-width="scale == 'day' ?  50 : 20"` to 
   have wider columns for days than for other column scales.
+  
+  If `undefined`, gantt will adjust columns width to fill available space.
 
 - **column-magnet** (default `15 minutes`)
 
@@ -331,6 +333,16 @@ review those projects documentations.
   
   After resolution of TimeFrame for each day, TimeFrame can be displayed or cropped from the gantt using
   `time-frames-working-mode` and `time-frames-non-working-mode`.
+  
+  You can also add `color` and `classes` properties on TimeFrame object to define custom style on displayed timeFrames.
+  
+  ```js  
+  closed: {
+       working: false // We don't work when it's closed
+       color: 'green' // Display in green because green is a nice color :)
+       classes: ['gantt-closed-timeframe'] // Give one or many class names to customize using CSS.       
+   }
+  ```
 
 - **time-frames-working-mode** (default `hidden`), 
 
@@ -432,10 +444,6 @@ review those projects documentations.
   - `quarter`
   - `year`
 
-- **width** (default: `0` = Disabled)
-
-  Width of the gantt in `px`. If defined, `columns-width` will have no effect.
-
 ### <a name="objects"></a> Objects
   An example of the data definition can be found in [demo sample file](demo/app/scripts/services/sample.js).
 
@@ -445,7 +453,10 @@ review those projects documentations.
     id: "...",  // Unique id of the row.
     name: "...", // Name shown on the left side of each row.
     order: <Number> // Row order for custom sort mode. Should be a unique number if defined (Optional). Tip: Property can be left away for default behaviour.
-    tasks: [] // Array containing the row tasks to add.
+    height: "..." // Height of the row (Optional).
+    color: "..." , // Color of the task in HEX format (Optional).
+    classes: <Array|String> // Array or String of class names which should be applied to the task. See ng-class documentation for details (Optional).
+    tasks: [] // Array containing <Task> tasks to add in this row.
 }
 ```
 
@@ -462,6 +473,15 @@ review those projects documentations.
     est: <Date> // When est and lct are defined a time window will be displayed around the task (Optional).
     lct: <Date> // See "est".
     data: <Any> // Custom object. Use this to attach your own data (Optional).
+    progress: <Number|Progress> // The progress of this task, as a percent number or a <Progress> object (Optional).
+}
+```
+
+- **Progress**
+```js
+{
+    percent: <Number> // Percentage of advancement, from 0 to 100.
+    color: "...", Color of the completion bar in HEX format
 }
 ```
 
@@ -540,6 +560,10 @@ All event names are prefixed with `event:gantt-`. You can also use constants by 
 - **row-labels-resized**
 
   Row labels have been resized.
+  
+- **tasks-filtered**, **rows-filtered**
+
+  Tasks/Rows have been filtered out.
 
 ### <a name="contribute"></a> Contribute
 

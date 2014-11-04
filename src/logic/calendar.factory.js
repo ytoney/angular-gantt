@@ -11,7 +11,8 @@ gantt.factory('GanttCalendar', ['$filter', function($filter) {
      * @param {moment|string} end end of timeFrame. If a string is given, it will be parsed as a moment.
      * @param {boolean} working is this timeFrame flagged as working.
      * @param {boolean} default is this timeFrame will be used as default.
-     * @param {string} cssClass css class attached to this timeFrame.
+     * @param {color} css color attached to this timeFrame.
+     * @param {string} classes css classes attached to this timeFrame.
      *
      * @constructor
      */
@@ -26,7 +27,8 @@ gantt.factory('GanttCalendar', ['$filter', function($filter) {
         self.end = options.end;
         self.working = options.working;
         self.default = options.default;
-        self.cssClass = options.cssClass;
+        self.color = options.color;
+        self.classes = options.classes;
 
         self.getDuration = function() {
             return self.end.diff(self.start, 'milliseconds');
@@ -76,9 +78,13 @@ gantt.factory('GanttCalendar', ['$filter', function($filter) {
         var self = this;
 
         self.evaluator = options.evaluator;
-        self.date = options.date;
-        self.start = options.start;
-        self.end = options.end;
+        if (options.date) {
+            self.start = moment(options.date).startOf('day');
+            self.end = moment(options.date).endOf('day');
+        } else {
+            self.start = options.start;
+            self.end = options.end;
+        }
         if (options.targets instanceof Array) {
             self.targets = options.targets;
         } else {
@@ -91,8 +97,6 @@ gantt.factory('GanttCalendar', ['$filter', function($filter) {
                 return self.evaluator(date);
             } else if (self.start && self.end) {
                 return date >= self.start && date <= self.end;
-            } else if (self.date) {
-                return self.date.year() === date.year() && self.date.dayOfYear() === date.dayOfYear();
             } else {
                 return false;
             }
@@ -260,6 +264,10 @@ gantt.factory('GanttCalendar', ['$filter', function($filter) {
                 }
             });
 
+            var dateYear = date.year();
+            var dateMonth = date.month();
+            var dateDate = date.date();
+
             var validatedTimeFrames = [];
             if (timeFrames.length === 0) {
                 angular.forEach(self.timeFrames, function(timeFrame) {
@@ -273,13 +281,15 @@ gantt.factory('GanttCalendar', ['$filter', function($filter) {
                 timeFrame = timeFrame.clone();
 
                 if (timeFrame.start !== undefined) {
-                    timeFrame.start.year(date.year());
-                    timeFrame.start.dayOfYear(date.dayOfYear());
+                    timeFrame.start.year(dateYear);
+                    timeFrame.start.month(dateMonth);
+                    timeFrame.start.date(dateDate);
                 }
 
                 if (timeFrame.end !== undefined) {
-                    timeFrame.end.year(date.year());
-                    timeFrame.end.dayOfYear(date.dayOfYear());
+                    timeFrame.end.year(dateYear);
+                    timeFrame.end.month(dateMonth);
+                    timeFrame.end.date(dateDate);
 
                     if (moment(timeFrame.end).startOf('day') === timeFrame.end) {
                         timeFrame.end.add(1, 'day');
@@ -307,6 +317,8 @@ gantt.factory('GanttCalendar', ['$filter', function($filter) {
          */
         self.solve = function(timeFrames, startDate, endDate) {
             var defaultWorking = timeFrames.length === 0;
+            var color;
+            var classes;
             var minDate;
             var maxDate;
 
@@ -316,6 +328,15 @@ gantt.factory('GanttCalendar', ['$filter', function($filter) {
                 }
                 if (maxDate === undefined || maxDate < timeFrame.end) {
                     maxDate = timeFrame.end;
+                }
+                if (color === undefined && timeFrame.color) {
+                    color = timeFrame.color;
+                }
+                if (timeFrame.classes !== undefined) {
+                    if (classes === undefined) {
+                        classes = [];
+                    }
+                    classes = classes.concat(timeFrame.classes);
                 }
             });
 
@@ -327,7 +348,7 @@ gantt.factory('GanttCalendar', ['$filter', function($filter) {
                 endDate = maxDate;
             }
 
-            var solvedTimeFrames = [new TimeFrame({start: startDate, end: endDate, working: defaultWorking})];
+            var solvedTimeFrames = [new TimeFrame({start: startDate, end: endDate, working: defaultWorking, color: color, classes: classes})];
 
             var orderedTimeFrames = $filter('orderBy')(timeFrames, function(timeFrame) {
                 return -timeFrame.getDuration();
@@ -350,8 +371,8 @@ gantt.factory('GanttCalendar', ['$filter', function($filter) {
                             timeFrame = timeFrame.clone();
                             var newSolvedTimeFrame = solvedTimeFrame.clone();
 
-                            solvedTimeFrame.end = timeFrame.start.clone();
-                            newSolvedTimeFrame.start = timeFrame.end.clone();
+                            solvedTimeFrame.end = moment(timeFrame.start);
+                            newSolvedTimeFrame.start = moment(timeFrame.end);
 
                             tmpSolvedTimeFrames.splice(i + 1, 0, timeFrame.clone(), newSolvedTimeFrame);
                             treated = true;
@@ -364,7 +385,7 @@ gantt.factory('GanttCalendar', ['$filter', function($filter) {
 
                             timeFrame = timeFrame.clone();
 
-                            solvedTimeFrame.end = timeFrame.start.clone();
+                            solvedTimeFrame.end = moment(timeFrame.start);
                             tmpSolvedTimeFrames.splice(i + 1, 0, timeFrame);
 
                             dispatched = true;
@@ -372,7 +393,7 @@ gantt.factory('GanttCalendar', ['$filter', function($filter) {
                             // timeFrame is dispatched on two solvedTimeFrame.
                             // Second part
 
-                            solvedTimeFrame.start = timeFrame.end.clone();
+                            solvedTimeFrame.start = moment(timeFrame.end);
                             dispatched = false;
                             treated = true;
                         }

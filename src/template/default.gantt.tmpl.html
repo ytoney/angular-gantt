@@ -1,19 +1,51 @@
 <div class="gantt unselectable" gantt-scroll-manager gantt-element-width-listener>
+    <!--<gantt-labels>-->
+      <!--<div class="gantt-labels-header">-->
+            <!--<gantt-row-header templateUrl="template/group.rowHeader.tmpl.html"></gantt-row-header>-->
+     <!--</div>-->
+     <!--<div class="gantt-labels-body"-->
+             <!--ng-style="(maxHeight > 0 && {'max-height': (maxHeight-template.header.getHeight())+'px'} || {})"-->
+             <!--ng-show="gantt.columns.length > 0">-->
+            <!--<div gantt-vertical-scroll-receiver style="position: relative">-->
+               <!--<gantt-row-label ng-repeat="row in gantt._group track by $index">-->
+                   <!--<span class="gantt-labels-text">{{ row.name }}</span>-->
+              <!--</gantt-row-label>-->
+           <!--</div>-->
+     <!--</div>-->
+    <!--</gantt-labels>-->
+
     <gantt-labels>
         <div class="gantt-labels-header">
             <gantt-row-header></gantt-row-header>
         </div>
         <div class="gantt-labels-body"
              ng-style="(maxHeight > 0 && {'max-height': (maxHeight-template.header.getHeight())+'px'} || {})"
-             ng-show="gantt.columns.length > 0">
-            <div gantt-vertical-scroll-receiver style="position: relative">
-                <gantt-row-label ng-repeat="row in gantt.visibleRows track by $index">
+             ng-show="gantt.columns.length > 0" ng-repeat="groupName in gantt.groupNames track by $index">
+
+            <div gantt-vertical-scroll-receiver style="position: relative;padding-left: 20px" ng-model="groupName">
+                <span class='gantt-labels-text'style="position: absolute;top: 0;bottom:0;left:0;width: 20px;word-break: break-all" ng-style="{'height':(maxHeight-template.header.getHeight())+'px'}">
+                    {{ groupName}}
+                </span>
+                <gantt-row-label ng-repeat="row in gantt.groups[groupName] track by $index">
                     <gantt-sortable swap="swapRows(a,b)" active="allowRowSorting" ng-model="row">
-                        <span>{{ row.name }}</span>
+                        <span class="gantt-labels-text">{{ row.name }}</span>
                     </gantt-sortable>
                 </gantt-row-label>
             </div>
         </div>
+
+        <!--<div class="gantt-labels-body"-->
+             <!--ng-style="(maxHeight > 0 && {'max-height': (maxHeight-template.header.getHeight())+'px'} || {})"-->
+             <!--ng-show="gantt.columns.length > 0">-->
+            <!--<div gantt-vertical-scroll-receiver style="position: relative">-->
+                <!--<gantt-row-label ng-repeat="row in gantt.visibleRows track by $index">-->
+                    <!--<gantt-sortable swap="swapRows(a,b)" active="allowRowSorting" ng-model="row">-->
+                        <!--<span class="gantt-labels-text">{{ row.name }}</span>-->
+                    <!--</gantt-sortable>-->
+                <!--</gantt-row-label>-->
+            <!--</div>-->
+        <!--</div>-->
+
     </gantt-labels>
     <gantt-header>
         <gantt-header-columns>
@@ -32,6 +64,8 @@
                 <div class="gantt-row-height"
                      ng-class-odd="'gantt-background-row'"
                      ng-class-even="'gantt-background-row-alt'"
+                     ng-class="row.classes"
+                     ng-style="{'background-color': row.color, 'height': row.height}"
                      ng-repeat="row in gantt.visibleRows track by $index">
                 </div>
             </div>
@@ -52,7 +86,7 @@
                         <div class="gantt-task-content"><span>{{ timespan.name }}</span></div>
                     </gantt-tooltip>
                 </div>
-                <gantt-row ng-repeat="row in gantt.visibleRows track by row.id">
+                <gantt-row ng-repeat="row in gantt.visibleRows track by $index">
                     <gantt-task ng-repeat="task in row.visibleTasks track by task.id"></gantt-task>
                 </gantt-row>
             </gantt-body-rows>
@@ -76,14 +110,15 @@
     <script type="text/ng-template" id="template/default.header.tmpl.html">
         <div ng-transclude class="gantt-header"
              ng-show="gantt.columns.length > 0 && gantt.getActiveHeadersCount() > 0"
-             ng-style="getHeaderStyle()"></div>
+             ng-style="getHeaderCss()"></div>
     </script>
 
     <!-- Row label template -->
     <script type="text/ng-template" id="template/default.rowLabel.tmpl.html">
         <div ng-transclude class="gantt-labels-row gantt-row-height"
              ng-class-odd="'gantt-background-row'"
-             ng-class-even="'gantt-background-row-alt'">
+             ng-class-even="'gantt-background-row-alt'"
+             ng-class="row.classes" ng-style="{'background-color': row.color, 'height': row.height}">
         </div>
     </script>
 
@@ -96,13 +131,21 @@
         </div>
     </script>
 
+    <script type="text/ng-template" id="template/group.rowHeader.tmpl.html">
+        <div class="gantt-labels-header-row"
+             ng-show="gantt.columns.length > 0 && gantt.getActiveHeadersCount() > 0"
+             ng-style="{'margin-top': ((gantt.getActiveHeadersCount()-1)*2)+'em'}">
+            <span>Group</span>
+        </div>
+    </script>
     <!-- Labels template -->
     <script type="text/ng-template" id="template/default.labels.tmpl.html">
         <div ng-transclude ng-if="showLabelsColumn" class="gantt-labels"
-             ng-style="(labelsWidth > 0 && {'width': labelsWidth+'px'} || {})"
+             ng-style="(labelsWidth > 0 && {'width': (labelsWidth)+'px'} || {})"
              gantt-labels-resize="$parent.allowLabelsResizing"
              gantt-labels-resize-width="$parent.labelsWidth"
-             gantt-labels-resize-min-width="50"></div>
+             gantt-labels-resize-min-width="50"
+             gantt-element-width-listener="$parent.labelsWidth"></div>
     </script>
 
     <!-- Header columns template -->
@@ -129,8 +172,8 @@
 
     <script type="text/ng-template" id="template/default.timeFrame.tmpl.html">
         <div class="gantt-timeframe"
-             ng-class="timeFrame.working && 'gantt-timeframe-working' || 'gantt-timeframe-non-working'"
-             ng-style="{'left': timeFrame.left + 'px', 'width': timeFrame.width + 'px'}"></div>
+             ng-class="getClass()"
+             ng-style="{'left': timeFrame.left + 'px', 'width': timeFrame.width + 'px', 'background-color': timeFrame.color && timeFrame.color || ''}"></div>
     </script>
 
     <!-- Scrollable template -->
@@ -153,6 +196,7 @@
             <div ng-if="task.truncatedLeft" class="gantt-task-truncated-left"><span>&lt;</span></div>
             <div class="gantt-task-content"><span>{{ (task.isMilestone === true && '&nbsp;' || task.name) }}</span></div>
             <div ng-if="task.truncatedRight" class="gantt-task-truncated-right"><span>&gt;</span></div>
+            <gantt-task-progress ng-if="task.progress !== undefined" gantt-task-progress-value="task.progress"></gantt-task-progress>
         </div>
     </script>
 
@@ -176,9 +220,14 @@
              ng-style='getCss()' ng-class='getClass()'></div>
     </script>
 
+    <!-- Task progress template -->
+    <script type="text/ng-template" id="template/default.taskProgress.tmpl.html">
+        <div class='gantt-task-progress' ng-style="getCss()" ng-class="progress.classes"></div>
+    </script>
+
     <!-- Row template -->
     <script type="text/ng-template" id="template/default.row.tmpl.html">
-        <div ng-transclude class="gantt-row gantt-row-height"></div>
+        <div ng-transclude class="gantt-row gantt-row-height" ng-style="{'height': row.height}"></div>
     </script>
 
 </div>

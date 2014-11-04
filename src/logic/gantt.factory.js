@@ -1,5 +1,43 @@
 'use strict';
-gantt.factory('Gantt', ['$filter', 'GanttRow', 'GanttTimespan', 'GanttColumnGenerator', 'GanttHeaderGenerator', 'moment', 'ganttBinarySearch', 'GANTT_EVENTS', function($filter, Row, Timespan, ColumnGenerator, HeaderGenerator, moment, bs, GANTT_EVENTS) {
+gantt.factory('Gantt', [
+    '$filter', 'GanttRow', 'GanttTimespan', 'GanttColumnGenerator', 'GanttHeaderGenerator', 'moment', 'ganttBinarySearch', 'ganttLayout', 'GANTT_EVENTS',
+    function($filter, Row, Timespan, ColumnGenerator, HeaderGenerator, moment, bs, layout, GANTT_EVENTS) {
+
+    function sortByGourp(data,callback){
+      var _groups =[];
+      var _def = '_empty';
+      var groups = {};
+      var groupNames =[];
+      var rows =[];
+      function addGroup(name,row){
+        if(!groups[name]){
+          groupNames.push(name);
+          groups[name] = [];
+        }
+        groups[name].push(row);
+      }
+
+      for(var i=0;i<data.length;i++){
+        var row = data[i];
+        if(row.data && row.data.group){
+          addGroup(row.data.group,row);
+        }else{
+          addGroup(_def,row);
+        }
+      }
+      for(var k in groups){
+//        var _group = {
+//          name:k,
+//          rows:groups[k],
+//          count:groups[k].length,
+//          height:0
+//        };
+//        _groups.push(_group);
+//        _group.height = _group.count*Row.defaultHeight +'px';
+        Array.prototype.push.apply(rows,groups[k]);
+      }
+      callback(rows,_groups,groups,groupNames);
+    }
 
     // Gantt logic. Manages the columns, rows and sorting functionality.
     var Gantt = function($scope, $element) {
@@ -9,6 +47,7 @@ gantt.factory('Gantt', ['$filter', 'GanttRow', 'GanttTimespan', 'GanttColumnGene
 
         self.rowsMap = {};
         self.rows = [];
+        self.filteredRows = [];
         self.visibleRows = [];
 
         self.timespansMap = {};
@@ -52,6 +91,12 @@ gantt.factory('Gantt', ['$filter', 'GanttRow', 'GanttTimespan', 'GanttColumnGene
             }
         });
 
+        $scope.$watch('ganttElementWidth+labelsWidth+showLabelsColumn+maxHeight', function(newValue, oldValue) {
+            if (!angular.equals(newValue, oldValue)) {
+                updateColumnsMeta();
+            }
+        });
+
         var updateVisibleColumns = function() {
             self.visibleColumns = $filter('ganttColumnLimit')(self.columns, $scope.scrollLeft, $scope.scrollWidth);
 
@@ -63,13 +108,52 @@ gantt.factory('Gantt', ['$filter', 'GanttRow', 'GanttTimespan', 'GanttColumnGene
         };
 
         var updateVisibleRows = function() {
-            self.visibleRows = $filter('ganttRowLimit')(self.rows, $scope.filterRow, $scope.filterRowComparator);
+            var oldFilteredRows = self.filteredRows;
+            if ($scope.filterRow) {
+                self.filteredRows = $filter('filter')(self.rows, $scope.filterRow, $scope.filterRowComparator);
+            } else {
+                self.filteredRows = self.rows.slice(0);
+            }
+            sortByGourp(self.filteredRows,function(rows,_group,groups,groupNames){
+              self.filteredRows = rows;
+              self._group = _group;
+              self.groups = groups;
+              self.groupNames = groupNames;
+            });
+            var filterEventData;
+            if (!angular.equals(oldFilteredRows, self.filteredRows)) {
+                filterEventData = {rows: self.rows, filteredRows: self.filteredRows};
+            }
+
+            // TODO: Implement rowLimit like columnLimit to enhance performance for gantt with many rows
+            self.visibleRows = self.filteredRows;
+            if (filterEventData !== undefined) {
+                $scope.$emit(GANTT_EVENTS.ROWS_FILTERED, filterEventData);
+            }
         };
 
         var updateVisibleTasks = function() {
-            angular.forEach(self.rows, function(row) {
+            var oldFilteredTasks = [];
+            var filteredTasks = [];
+            var tasks = [];
+//          sortByGourp(self.filteredRows,function(rows,groups){
+//            self.filteredRows = rows;
+//          });
+            angular.forEach(self.filteredRows, function(row) {
+                oldFilteredTasks = oldFilteredTasks.concat(row.filteredTasks);
                 row.updateVisibleTasks();
+                filteredTasks = filteredTasks.concat(row.filteredTasks);
+                tasks = tasks.concat(row.tasks);
             });
+
+            var filterEventData;
+            if (!angular.equals(oldFilteredTasks, filteredTasks)) {
+                filterEventData = {tasks: tasks, filteredTasks: filteredTasks};
+            }
+
+            if (filterEventData !== undefined) {
+                $scope.$emit(GANTT_EVENTS.TASKS_FILTERED, filterEventData);
+            }
         };
 
         var updateVisibleObjects = function() {
@@ -168,20 +252,60 @@ gantt.factory('Gantt', ['$filter', 'GanttRow', 'GanttTimespan', 'GanttColumnGene
             self.previousColumns = [];
             self.nextColumns = [];
 
+            updateColumnsMeta();
+
+            return true;
+        };
+
+        var setColumnsWidth = function(width, originalWidth, columns) {
+            if (width && originalWidth && columns) {
+
+                var widthFactor = Math.abs(width / originalWidth);
+
+                angular.forEach(columns, function(column) {
+                    column.left = widthFactor * column.originalSize.left;
+                    column.width = widthFactor * column.originalSize.width;
+
+                    angular.forEach(column.timeFrames, function(timeFrame) {
+                        timeFrame.left = widthFactor * timeFrame.originalSize.left;
+                        timeFrame.width = widthFactor * timeFrame.originalSize.width;
+                    });
+                });
+            }
+        };
+
+        var updateColumnsMeta = function() {
             var lastColumn = self.getLastColumn();
+            self.originalWidth = lastColumn !== undefined ? lastColumn.originalSize.left + lastColumn.originalSize.width : 0;
+
+            if ($scope.columnWidth === undefined) {
+                var newWidth = $scope.ganttElementWidth - ($scope.showLabelsColumn ? $scope.labelsWidth : 0);
+
+                if ($scope.maxHeight > 0) {
+                    newWidth = newWidth - layout.getScrollBarWidth();
+                }
+
+                setColumnsWidth(newWidth, self.originalWidth, self.previousColumns);
+                setColumnsWidth(newWidth, self.originalWidth, self.columns);
+                setColumnsWidth(newWidth, self.originalWidth, self.nextColumns);
+
+                angular.forEach(self.headers, function(header) {
+                    setColumnsWidth(newWidth, self.originalWidth, header);
+                });
+            }
+
             self.width = lastColumn !== undefined ? lastColumn.left + lastColumn.width : 0;
 
             if (self._currentDate !== undefined) {
                 self.setCurrentDate(self._currentDate);
             }
+            $scope.currentDatePosition = self.getPositionByDate($scope.currentDateValue);
 
             self.updateTasksPosAndSize();
             self.updateTimespansPosAndSize();
 
             updateVisibleColumns();
             updateVisibleObjects();
-
-            return true;
         };
 
         var expandExtendedColumnsForPosition = function(x) {
@@ -238,7 +362,7 @@ gantt.factory('Gantt', ['$filter', 'GanttRow', 'GanttTimespan', 'GanttColumnGene
         // The headers are shown depending on the defined view scale.
         self.buildGenerators = function() {
             self.columnGenerator = new ColumnGenerator($scope);
-            self.headerGenerator = new HeaderGenerator.instance($scope);
+            self.headerGenerator = new HeaderGenerator($scope);
         };
 
         var getDefaultFrom = function() {
@@ -281,7 +405,6 @@ gantt.factory('Gantt', ['$filter', 'GanttRow', 'GanttTimespan', 'GanttColumnGene
                 to = getExpandedTo(to);
             }
             generateColumns(from, to);
-            updateVisibleColumns();
         };
 
         // Removes all existing columns and re-generates them. E.g. after e.g. the view scale changed.
@@ -426,6 +549,7 @@ gantt.factory('Gantt', ['$filter', 'GanttRow', 'GanttTimespan', 'GanttColumnGene
 
         // Adds or update rows and tasks.
         self.addData = function(data) {
+            //insert
             for (var i = 0, l = data.length; i < l; i++) {
                 var rowData = data[i];
                 addRow(rowData);
@@ -458,9 +582,11 @@ gantt.factory('Gantt', ['$filter', 'GanttRow', 'GanttTimespan', 'GanttColumnGene
                     self.highestRowOrder = order + 1;
                 }
 
-                row = new Row(rowData.id, self, rowData.name, order, rowData.data);
+                row = new Row(rowData.id, self, rowData.name, order, rowData.height, rowData.color, rowData.classes, rowData.data);
                 self.rowsMap[rowData.id] = row;
                 self.rows.push(row);
+                self.filteredRows.push(row);
+                self.visibleRows.push(row);
                 $scope.$emit(GANTT_EVENTS.ROW_ADDED, {'row': row});
             }
 
@@ -506,14 +632,32 @@ gantt.factory('Gantt', ['$filter', 'GanttRow', 'GanttTimespan', 'GanttColumnGene
             if (rowId in self.rowsMap) {
                 delete self.rowsMap[rowId]; // Remove from map
 
-                for (var i = 0, l = self.rows.length; i < l; i++) {
-                    var row = self.rows[i];
+                var removedRow;
+                var row;
+                for (var i = self.rows.length -1; i >=0 ; i--) {
+                    row = self.rows[i];
                     if (row.id === rowId) {
+                        removedRow = row;
                         self.rows.splice(i, 1); // Remove from array
-                        $scope.$emit(GANTT_EVENTS.ROW_REMOVED, {'row': row});
-                        return row;
                     }
                 }
+
+                for (i = self.filteredRows.length -1; i >=0 ; i--) {
+                    row = self.filteredRows[i];
+                    if (row.id === rowId) {
+                        self.filteredRows.splice(i, 1); // Remove from filtered array
+                    }
+                }
+
+                for (i = self.visibleRows.length -1; i >=0 ; i--) {
+                    row = self.visibleRows[i];
+                    if (row.id === rowId) {
+                        self.visibleRows.splice(i, 1); // Remove from visible array
+                    }
+                }
+
+                $scope.$emit(GANTT_EVENTS.ROW_REMOVED, {'row': removedRow});
+                return row;
             }
 
             return undefined;
@@ -523,6 +667,8 @@ gantt.factory('Gantt', ['$filter', 'GanttRow', 'GanttTimespan', 'GanttColumnGene
         self.removeAllRows = function() {
             self.rowsMap = {};
             self.rows = [];
+            self.filteredRows = [];
+            self.visibleRows = [];
             self.highestRowOrder = 0;
             self.clearColumns();
             self.scrollAnchor = undefined;
@@ -544,22 +690,22 @@ gantt.factory('Gantt', ['$filter', 'GanttRow', 'GanttTimespan', 'GanttColumnGene
 
         // Sort rows by the specified sort mode (name, order, custom)
         // and by Ascending or Descending
-        self.sortRows = function(expression) {
-            var reverse = false;
-            expression = expression;
-            if (expression.charAt(0) === '-') {
-                reverse = true;
-                expression = expression.substr(1);
-            }
-
-            var angularOrderBy = $filter('orderBy');
-            if (expression === 'custom') {
-                self.rows = angularOrderBy(self.rows, 'order', reverse);
-            } else {
-                self.rows = angularOrderBy(self.rows, expression, reverse);
-            }
-
-            updateVisibleRows();
+        self.sortRows = function() {
+//            var reverse = false;
+//            expression = expression;
+//            if (expression.charAt(0) === '-') {
+//                reverse = true;
+//                expression = expression.substr(1);
+//            }
+//
+//            var angularOrderBy = $filter('orderBy');
+//            if (expression === 'custom') {
+//                self.rows = angularOrderBy(self.rows, 'order', reverse);
+//            } else {
+//                self.rows = angularOrderBy(self.rows, expression, reverse);
+//            }
+//
+//            updateVisibleRows();
         };
 
         // Adds or updates timespans

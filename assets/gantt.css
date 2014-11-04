@@ -84,6 +84,10 @@
     height: 100%;
 }
 
+.gantt-body-rows {
+    overflow-x: hidden;
+}
+
 .gantt-body-background {
     position: absolute;
     height: 100%;
@@ -128,11 +132,13 @@
 }
 
 .gantt-timeframe-non-working {
-    background-color: rgba(200, 200, 200, 0.3);
+    background-color: lightgray;
+    opacity: 0.3;
 }
 
 .gantt-foreground-col-current-date {
-    background-color: rgba(255, 0, 0, 0.3);
+    background-color: green;
+    opacity: 0.6
 }
 
 .gantt-background-row-alt {
@@ -163,6 +169,13 @@
     border-radius: 2px;
 }
 
+.gantt-task-progress {
+    position: relative;
+    top: 2px; bottom: 0;
+    height: 25%;
+    border-radius: 2px;
+}
+
 .gantt-task-milestone {
     position: absolute;
     margin: auto;
@@ -174,10 +187,13 @@
 }
 
 .gantt-task-content {
+    position: relative;
     margin-left: 5px;
     margin-right: 5px;
     margin-top: 0.3em;
+    text-align: center;
     overflow: hidden;
+    z-index: 10;
 }
 
 .gantt-task {
@@ -292,7 +308,8 @@
 }
 
 .gantt-current-date-line {
-    border: 1px dotted rgba(255, 0, 0, 0.6);
+    border: 1px dotted green;
+    opacity: 0.6;
     height: 100%;
     position: absolute;
     z-index: 2;

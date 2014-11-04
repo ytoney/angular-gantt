@@ -19,6 +19,11 @@ gantt.factory('GanttColumn', [ 'moment', function(moment) {
         self.cropped = false;
         self.columnMagnetValue = columnMagnetValue;
         self.columnMagnetUnit = columnMagnetUnit;
+        self.originalSize = {left: self.left, width: self.width};
+
+        var getDateKey = function(date) {
+            return date.year() + '-' + date.month() + '-' + date.date();
+        };
 
         if (self.calendar !== undefined && (self.timeFramesNonWorkingMode !== 'hidden' || self.timeFramesWorkingMode !== 'hidden')) {
             var buildPushTimeFrames = function(timeFrames, startDate, endDate) {
@@ -50,22 +55,23 @@ gantt.factory('GanttColumn', [ 'moment', function(moment) {
                 };
             };
 
-            var cDate = moment(self.date).startOf('day');
+            var cDate = self.date;
+            var cDateStartOfDay = moment(cDate).startOf('day');
+            var cDateNextDay = cDateStartOfDay.add(1, 'day');
             while (cDate < self.endDate) {
                 var timeFrames = self.calendar.getTimeFrames(cDate);
-                var nextCDate = moment.min(moment(cDate).add(1, 'day'), moment(self.endDate));
+                var nextCDate = moment.min(cDateNextDay, self.endDate);
                 timeFrames = self.calendar.solve(timeFrames, cDate, nextCDate);
                 var cTimeFrames = [];
                 angular.forEach(timeFrames, buildPushTimeFrames(cTimeFrames, cDate, nextCDate));
-                cDate = nextCDate;
                 self.timeFrames = self.timeFrames.concat(cTimeFrames);
 
-                var year = cDate.year();
-                if (self.daysTimeFrames[year] === undefined) {
-                    self.daysTimeFrames[year] = {dayOfYear: cTimeFrames};
-                } else {
-                    self.daysTimeFrames[year][cDate.dayOfYear()] = cTimeFrames;
-                }
+                var cDateKey = getDateKey(cDate);
+                self.daysTimeFrames[cDateKey] = cTimeFrames;
+
+                cDate = nextCDate;
+                cDateStartOfDay = moment(cDate).startOf('day');
+                cDateNextDay = cDateStartOfDay.add(1, 'day');
             }
 
             angular.forEach(self.timeFrames, function(timeFrame) {
@@ -89,6 +95,7 @@ gantt.factory('GanttColumn', [ 'moment', function(moment) {
                 timeFrame.hidden = hidden;
                 timeFrame.left = position;
                 timeFrame.width = timeFramePosition;
+                timeFrame.originalSize = {left: timeFrame.left, width: timeFrame.width};
             });
 
             if (self.timeFramesNonWorkingMode === 'cropped' || self.timeFramesWorkingMode === 'cropped') {
@@ -103,6 +110,7 @@ gantt.factory('GanttColumn', [ 'moment', function(moment) {
                 if (timeFramesWidth !== self.width) {
                     var croppedRatio = self.width / timeFramesWidth;
                     var croppedWidth = 0;
+                    var originalCroppedWidth = 0;
 
                     var allCropped = true;
 
@@ -111,27 +119,33 @@ gantt.factory('GanttColumn', [ 'moment', function(moment) {
                             timeFrame.working && self.timeFramesWorkingMode !== 'cropped') {
                             timeFrame.left = (timeFrame.left - croppedWidth) * croppedRatio;
                             timeFrame.width = timeFrame.width * croppedRatio;
+                            timeFrame.originalSize.left = (timeFrame.originalSize.left - originalCroppedWidth) * croppedRatio;
+                            timeFrame.originalSize.width = timeFrame.originalSize.width * croppedRatio;
                             timeFrame.cropped = false;
                             allCropped = false;
                         } else {
                             croppedWidth += timeFrame.width;
+                            originalCroppedWidth += timeFrame.originalSize.width;
                             timeFrame.left = undefined;
                             timeFrame.width = 0;
+                            timeFrame.originalSize = {left: undefined, width: 0};
                             timeFrame.cropped = true;
                         }
                     });
 
                     self.cropped = allCropped;
+                } else {
+                    self.cropped = false;
                 }
             }
         }
 
         self.clone = function() {
-            return new Column(self.date.clone(), self.endDate.clone(), self.left, self.width, self.calendar);
+            return new Column(moment(self.date), moment(self.endDate), self.left, self.width, self.calendar);
         };
 
         self.containsDate = function(date) {
-            return moment(date) > self.date && moment(date) <= self.endDate;
+            return date > self.date && date <= self.endDate;
         };
 
         self.equals = function(other) {
@@ -140,7 +154,7 @@ gantt.factory('GanttColumn', [ 'moment', function(moment) {
 
         self.getMagnetDate = function(date) {
             if (self.columnMagnetValue > 0 && self.columnMagnetUnit !== undefined) {
-                date = date.clone();
+                date = moment(date);
                 var value = date.get(self.columnMagnetUnit);
                 var magnetValue = Math.round(value/self.columnMagnetValue) * self.columnMagnetValue;
                 date.startOf(self.columnMagnetUnit);
@@ -182,7 +196,6 @@ gantt.factory('GanttColumn', [ 'moment', function(moment) {
                 date = moment(self.date).add(positionDuration, 'milliseconds');
             }
 
-
             if (magnet) {
                 return self.getMagnetDate(date);
             }
@@ -191,11 +204,7 @@ gantt.factory('GanttColumn', [ 'moment', function(moment) {
         };
 
         var getDayTimeFrame = function(date) {
-            var dtf = self.daysTimeFrames[date.year()];
-            if (dtf === undefined) {
-                return [];
-            }
-            dtf = dtf[date.dayOfYear()];
+            var dtf = self.daysTimeFrames[getDateKey(date)];
             if (dtf === undefined) {
                 return [];
             }

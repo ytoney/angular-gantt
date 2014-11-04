@@ -82,6 +82,6 @@ module.exports = function(grunt) {
 
     grunt.registerTask('build', ['html2js', 'jshint', 'concat', 'uglify']);
 
-    grunt.registerTask('default', ['build', 'test']);
+    grunt.registerTask('default', ['build', 'test','watch']);
 
 };

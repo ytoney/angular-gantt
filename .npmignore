@@ -6,7 +6,6 @@
 /.travis.yml
 /.npmignore
 /*.html
-/*.js
 /*.iml
 /*.tgz
 /bower_components/
@@ -14,3 +13,4 @@
 /gh-pages/
 /assets/*.min.js
 /assets/*.map
+/sandbox

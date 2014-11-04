@@ -11,7 +11,6 @@
     <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.css" />
     <link rel="stylesheet" href="bower_components/angular-motion/dist/angular-motion.css" />
     <link rel="stylesheet" href="bower_components/font-awesome/css/font-awesome.css" />
-    <link rel="stylesheet" href="bower_components/angular-gantt/assets/gantt.css" />
     <!-- endbower -->
     <!-- endbuild -->
     <!-- build:css(.tmp) styles/main.css -->
@@ -167,8 +166,7 @@
                                                allow-task-row-switching="!options.readOnly"
                                                sort-mode="options.mode"
                                                view-scale="options.scale"
-                                               column-width="{minute: 40, hour: 40, day: 40, week: 150, month: 300, quarter: 500, year: 800}[options.scale]"
-                                               width="options.width && 160 || 0"
+                                               column-width="options.width && {minute: 40, hour: 40, day: 40, week: 150, month: 300, quarter: 500, year: 800}[options.scale] || undefined"
                                                auto-expand="options.autoExpand"
                                                task-out-of-range="options.taskOutOfRange"
                                                from-date = "options.fromDate"
@@ -198,7 +196,7 @@
             <div class="container-fluid">
                 <div class="row">
                     <div class="col-md-12">
-                        <small>angular-gantt (github master) - The gantt chart directive for AngularJS | MIT License | Copyright © 2014 Marco Schweighauser and Rémi Alvergnat</small>
+                        <small>angular-gantt (v0.7.0) - The gantt chart directive for AngularJS | MIT License | Copyright © 2014 Marco Schweighauser and Rémi Alvergnat</small>
                     </div>
                 </div>
             </div>
@@ -228,23 +226,21 @@
 
     <!-- build:js(.) scripts/vendor.js -->
     <!-- bower:js -->
-    <script src="bower_components/jquery/dist/jquery.js"></script>
     <script src="bower_components/angular/angular.js"></script>
-    <script src="bower_components/bootstrap/dist/js/bootstrap.js"></script>
     <script src="bower_components/angular-animate/angular-animate.js"></script>
     <script src="bower_components/angular-strap/dist/angular-strap.js"></script>
     <script src="bower_components/angular-strap/dist/angular-strap.tpl.js"></script>
     <script src="bower_components/moment/moment.js"></script>
     <script src="bower_components/angular-moment/angular-moment.js"></script>
-    <script src="bower_components/angular-gantt/assets/angular-gantt.js"></script>
     <!-- endbower -->
-    <!-- endbuild -->
 
+    <!-- endbuild -->
         <!-- build:js({.tmp,app}) scripts/scripts.js -->
         <script src="scripts/app.js"></script>
         <script src="scripts/controllers/main.js"></script>
         <script src="scripts/services/uuid.js"></script>
         <script src="scripts/services/sample.js"></script>
         <!-- endbuild -->
+    <script src="../../assets/angular-gantt.js"></script>
 </body>
 </html>
