@@ -1,5 +1,6 @@
 'use strict';
 gantt.factory('GanttRow', ['GanttTask', 'moment', '$filter', 'GANTT_EVENTS', function(Task, moment, $filter, GANTT_EVENTS) {
+    var _default = 30;
     var Row = function(id, gantt, name, order, height, color, classes, data) {
         var self = this;
 
@@ -169,5 +170,6 @@ gantt.factory('GanttRow', ['GanttTask', 'moment', '$filter', 'GANTT_EVENTS', fun
         };
     };
 
+    Row.defaultHeight = _default;
     return Row;
 }]);

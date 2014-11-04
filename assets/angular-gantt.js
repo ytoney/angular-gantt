@@ -1187,6 +1187,42 @@ gantt.factory('Gantt', [
     '$filter', 'GanttRow', 'GanttTimespan', 'GanttColumnGenerator', 'GanttHeaderGenerator', 'moment', 'ganttBinarySearch', 'ganttLayout', 'GANTT_EVENTS',
     function($filter, Row, Timespan, ColumnGenerator, HeaderGenerator, moment, bs, layout, GANTT_EVENTS) {
 
+    function sortByGourp(data,callback){
+      var _groups =[];
+      var _def = '_empty';
+      var groups = {};
+      var groupNames =[];
+      var rows =[];
+      function addGroup(name,row){
+        if(!groups[name]){
+          groupNames.push(name);
+          groups[name] = [];
+        }
+        groups[name].push(row);
+      }
+
+      for(var i=0;i<data.length;i++){
+        var row = data[i];
+        if(row.data && row.data.group){
+          addGroup(row.data.group,row);
+        }else{
+          addGroup(_def,row);
+        }
+      }
+      for(var k in groups){
+//        var _group = {
+//          name:k,
+//          rows:groups[k],
+//          count:groups[k].length,
+//          height:0
+//        };
+//        _groups.push(_group);
+//        _group.height = _group.count*Row.defaultHeight +'px';
+        Array.prototype.push.apply(rows,groups[k]);
+      }
+      callback(rows,_groups,groups,groupNames);
+    }
+
     // Gantt logic. Manages the columns, rows and sorting functionality.
     var Gantt = function($scope, $element) {
         var self = this;
@@ -1262,7 +1298,12 @@ gantt.factory('Gantt', [
             } else {
                 self.filteredRows = self.rows.slice(0);
             }
-
+            sortByGourp(self.filteredRows,function(rows,_group,groups,groupNames){
+              self.filteredRows = rows;
+              self._group = _group;
+              self.groups = groups;
+              self.groupNames = groupNames;
+            });
             var filterEventData;
             if (!angular.equals(oldFilteredRows, self.filteredRows)) {
                 filterEventData = {rows: self.rows, filteredRows: self.filteredRows};
@@ -1279,7 +1320,9 @@ gantt.factory('Gantt', [
             var oldFilteredTasks = [];
             var filteredTasks = [];
             var tasks = [];
-
+//          sortByGourp(self.filteredRows,function(rows,groups){
+//            self.filteredRows = rows;
+//          });
             angular.forEach(self.filteredRows, function(row) {
                 oldFilteredTasks = oldFilteredTasks.concat(row.filteredTasks);
                 row.updateVisibleTasks();
@@ -1690,6 +1733,7 @@ gantt.factory('Gantt', [
 
         // Adds or update rows and tasks.
         self.addData = function(data) {
+            //insert
             for (var i = 0, l = data.length; i < l; i++) {
                 var rowData = data[i];
                 addRow(rowData);
@@ -1830,22 +1874,22 @@ gantt.factory('Gantt', [
 
         // Sort rows by the specified sort mode (name, order, custom)
         // and by Ascending or Descending
-        self.sortRows = function(expression) {
-            var reverse = false;
-            expression = expression;
-            if (expression.charAt(0) === '-') {
-                reverse = true;
-                expression = expression.substr(1);
-            }
-
-            var angularOrderBy = $filter('orderBy');
-            if (expression === 'custom') {
-                self.rows = angularOrderBy(self.rows, 'order', reverse);
-            } else {
-                self.rows = angularOrderBy(self.rows, expression, reverse);
-            }
-
-            updateVisibleRows();
+        self.sortRows = function() {
+//            var reverse = false;
+//            expression = expression;
+//            if (expression.charAt(0) === '-') {
+//                reverse = true;
+//                expression = expression.substr(1);
+//            }
+//
+//            var angularOrderBy = $filter('orderBy');
+//            if (expression === 'custom') {
+//                self.rows = angularOrderBy(self.rows, 'order', reverse);
+//            } else {
+//                self.rows = angularOrderBy(self.rows, expression, reverse);
+//            }
+//
+//            updateVisibleRows();
         };
 
         // Adds or updates timespans
@@ -1972,6 +2016,7 @@ gantt.factory('GanttHeaderGenerator', ['GanttColumnHeader', function(ColumnHeade
 
 
 gantt.factory('GanttRow', ['GanttTask', 'moment', '$filter', 'GANTT_EVENTS', function(Task, moment, $filter, GANTT_EVENTS) {
+    var _default = 30;
     var Row = function(id, gantt, name, order, height, color, classes, data) {
         var self = this;
 
@@ -2141,6 +2186,7 @@ gantt.factory('GanttRow', ['GanttTask', 'moment', '$filter', 'GANTT_EVENTS', fun
         };
     };
 
+    Row.defaultHeight = _default;
     return Row;
 }]);
 
@@ -2717,10 +2763,10 @@ gantt.directive('ganttRowHeader', ['GanttEvents', 'GANTT_EVENTS', function(Event
         transclude: true,
         replace: true,
         templateUrl: function(tElement, tAttrs) {
-            if (tAttrs.templateUrl === undefined) {
+            if (tAttrs.templateurl === undefined) {
                 return 'template/default.rowHeader.tmpl.html';
             } else {
-                return tAttrs.templateUrl;
+                return tAttrs.templateurl;
             }
         },
         controller: ['$scope', '$element', function($scope, $element) {
@@ -3346,7 +3392,7 @@ gantt.directive('ganttTask', ['$window', '$document', '$timeout', '$filter', 'ga
                     return $scope.task.row;
                 } else {
                     var visibleRows = [];
-                    angular.forEach($scope.task.row.gantt.rows, function(row) {
+                    angular.forEach($scope.task.row.gantt.filteredRows, function(row) {
                         if (!row.hidden) {
                             visibleRows.push(row);
                         }
@@ -3915,21 +3961,53 @@ gantt.factory('ganttSmartEvent', [function() {
 angular.module('ganttTemplates', []).run(['$templateCache', function($templateCache) {
     $templateCache.put('template/default.gantt.tmpl.html',
         '<div class="gantt unselectable" gantt-scroll-manager gantt-element-width-listener>\n' +
+        '    <!--<gantt-labels>-->\n' +
+        '      <!--<div class="gantt-labels-header">-->\n' +
+        '            <!--<gantt-row-header templateUrl="template/group.rowHeader.tmpl.html"></gantt-row-header>-->\n' +
+        '     <!--</div>-->\n' +
+        '     <!--<div class="gantt-labels-body"-->\n' +
+        '             <!--ng-style="(maxHeight > 0 && {\'max-height\': (maxHeight-template.header.getHeight())+\'px\'} || {})"-->\n' +
+        '             <!--ng-show="gantt.columns.length > 0">-->\n' +
+        '            <!--<div gantt-vertical-scroll-receiver style="position: relative">-->\n' +
+        '               <!--<gantt-row-label ng-repeat="row in gantt._group track by $index">-->\n' +
+        '                   <!--<span class="gantt-labels-text">{{ row.name }}</span>-->\n' +
+        '              <!--</gantt-row-label>-->\n' +
+        '           <!--</div>-->\n' +
+        '     <!--</div>-->\n' +
+        '    <!--</gantt-labels>-->\n' +
+        '\n' +
         '    <gantt-labels>\n' +
         '        <div class="gantt-labels-header">\n' +
         '            <gantt-row-header></gantt-row-header>\n' +
         '        </div>\n' +
         '        <div class="gantt-labels-body"\n' +
         '             ng-style="(maxHeight > 0 && {\'max-height\': (maxHeight-template.header.getHeight())+\'px\'} || {})"\n' +
-        '             ng-show="gantt.columns.length > 0">\n' +
-        '            <div gantt-vertical-scroll-receiver style="position: relative">\n' +
-        '                <gantt-row-label ng-repeat="row in gantt.visibleRows track by $index">\n' +
+        '             ng-show="gantt.columns.length > 0" ng-repeat="groupName in gantt.groupNames track by $index">\n' +
+        '\n' +
+        '            <div gantt-vertical-scroll-receiver style="position: relative;padding-left: 20px" ng-model="groupName">\n' +
+        '                <span class=\'gantt-labels-text\'style="position: absolute;top: 0;bottom:0;left:0;width: 20px;word-break: break-all" ng-style="{\'height\':(maxHeight-template.header.getHeight())+\'px\'}">\n' +
+        '                    {{ groupName}}\n' +
+        '                </span>\n' +
+        '                <gantt-row-label ng-repeat="row in gantt.groups[groupName] track by $index">\n' +
         '                    <gantt-sortable swap="swapRows(a,b)" active="allowRowSorting" ng-model="row">\n' +
         '                        <span class="gantt-labels-text">{{ row.name }}</span>\n' +
         '                    </gantt-sortable>\n' +
         '                </gantt-row-label>\n' +
         '            </div>\n' +
         '        </div>\n' +
+        '\n' +
+        '        <!--<div class="gantt-labels-body"-->\n' +
+        '             <!--ng-style="(maxHeight > 0 && {\'max-height\': (maxHeight-template.header.getHeight())+\'px\'} || {})"-->\n' +
+        '             <!--ng-show="gantt.columns.length > 0">-->\n' +
+        '            <!--<div gantt-vertical-scroll-receiver style="position: relative">-->\n' +
+        '                <!--<gantt-row-label ng-repeat="row in gantt.visibleRows track by $index">-->\n' +
+        '                    <!--<gantt-sortable swap="swapRows(a,b)" active="allowRowSorting" ng-model="row">-->\n' +
+        '                        <!--<span class="gantt-labels-text">{{ row.name }}</span>-->\n' +
+        '                    <!--</gantt-sortable>-->\n' +
+        '                <!--</gantt-row-label>-->\n' +
+        '            <!--</div>-->\n' +
+        '        <!--</div>-->\n' +
+        '\n' +
         '    </gantt-labels>\n' +
         '    <gantt-header>\n' +
         '        <gantt-header-columns>\n' +
@@ -4015,10 +4093,17 @@ angular.module('ganttTemplates', []).run(['$templateCache', function($templateCa
         '        </div>\n' +
         '    </script>\n' +
         '\n' +
+        '    <script type="text/ng-template" id="template/group.rowHeader.tmpl.html">\n' +
+        '        <div class="gantt-labels-header-row"\n' +
+        '             ng-show="gantt.columns.length > 0 && gantt.getActiveHeadersCount() > 0"\n' +
+        '             ng-style="{\'margin-top\': ((gantt.getActiveHeadersCount()-1)*2)+\'em\'}">\n' +
+        '            <span>Group</span>\n' +
+        '        </div>\n' +
+        '    </script>\n' +
         '    <!-- Labels template -->\n' +
         '    <script type="text/ng-template" id="template/default.labels.tmpl.html">\n' +
         '        <div ng-transclude ng-if="showLabelsColumn" class="gantt-labels"\n' +
-        '             ng-style="(labelsWidth > 0 && {\'width\': labelsWidth+\'px\'} || {})"\n' +
+        '             ng-style="(labelsWidth > 0 && {\'width\': (labelsWidth)+\'px\'} || {})"\n' +
         '             gantt-labels-resize="$parent.allowLabelsResizing"\n' +
         '             gantt-labels-resize-width="$parent.labelsWidth"\n' +
         '             gantt-labels-resize-min-width="50"\n' +

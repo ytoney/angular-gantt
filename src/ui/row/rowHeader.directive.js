@@ -5,10 +5,10 @@ gantt.directive('ganttRowHeader', ['GanttEvents', 'GANTT_EVENTS', function(Event
         transclude: true,
         replace: true,
         templateUrl: function(tElement, tAttrs) {
-            if (tAttrs.templateUrl === undefined) {
+            if (tAttrs.templateurl === undefined) {
                 return 'template/default.rowHeader.tmpl.html';
             } else {
-                return tAttrs.templateUrl;
+                return tAttrs.templateurl;
             }
         },
         controller: ['$scope', '$element', function($scope, $element) {

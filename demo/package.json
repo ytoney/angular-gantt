@@ -11,7 +11,9 @@
     "type": "git",
     "url": "git://github.com/angular-gantt/angular-gantt.git"
   },
-  "dependencies": {},
+  "dependencies": {
+    "optipng-bin": "^2.0.1"
+  },
   "devDependencies": {
     "grunt": "^0.4.1",
     "grunt-autoprefixer": "^0.7.3",

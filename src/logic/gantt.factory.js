@@ -3,6 +3,42 @@ gantt.factory('Gantt', [
     '$filter', 'GanttRow', 'GanttTimespan', 'GanttColumnGenerator', 'GanttHeaderGenerator', 'moment', 'ganttBinarySearch', 'ganttLayout', 'GANTT_EVENTS',
     function($filter, Row, Timespan, ColumnGenerator, HeaderGenerator, moment, bs, layout, GANTT_EVENTS) {
 
+    function sortByGourp(data,callback){
+      var _groups =[];
+      var _def = '_empty';
+      var groups = {};
+      var groupNames =[];
+      var rows =[];
+      function addGroup(name,row){
+        if(!groups[name]){
+          groupNames.push(name);
+          groups[name] = [];
+        }
+        groups[name].push(row);
+      }
+
+      for(var i=0;i<data.length;i++){
+        var row = data[i];
+        if(row.data && row.data.group){
+          addGroup(row.data.group,row);
+        }else{
+          addGroup(_def,row);
+        }
+      }
+      for(var k in groups){
+//        var _group = {
+//          name:k,
+//          rows:groups[k],
+//          count:groups[k].length,
+//          height:0
+//        };
+//        _groups.push(_group);
+//        _group.height = _group.count*Row.defaultHeight +'px';
+        Array.prototype.push.apply(rows,groups[k]);
+      }
+      callback(rows,_groups,groups,groupNames);
+    }
+
     // Gantt logic. Manages the columns, rows and sorting functionality.
     var Gantt = function($scope, $element) {
         var self = this;
@@ -78,7 +114,12 @@ gantt.factory('Gantt', [
             } else {
                 self.filteredRows = self.rows.slice(0);
             }
-
+            sortByGourp(self.filteredRows,function(rows,_group,groups,groupNames){
+              self.filteredRows = rows;
+              self._group = _group;
+              self.groups = groups;
+              self.groupNames = groupNames;
+            });
             var filterEventData;
             if (!angular.equals(oldFilteredRows, self.filteredRows)) {
                 filterEventData = {rows: self.rows, filteredRows: self.filteredRows};
@@ -95,7 +136,9 @@ gantt.factory('Gantt', [
             var oldFilteredTasks = [];
             var filteredTasks = [];
             var tasks = [];
-
+//          sortByGourp(self.filteredRows,function(rows,groups){
+//            self.filteredRows = rows;
+//          });
             angular.forEach(self.filteredRows, function(row) {
                 oldFilteredTasks = oldFilteredTasks.concat(row.filteredTasks);
                 row.updateVisibleTasks();
@@ -506,6 +549,7 @@ gantt.factory('Gantt', [
 
         // Adds or update rows and tasks.
         self.addData = function(data) {
+            //insert
             for (var i = 0, l = data.length; i < l; i++) {
                 var rowData = data[i];
                 addRow(rowData);
@@ -646,22 +690,22 @@ gantt.factory('Gantt', [
 
         // Sort rows by the specified sort mode (name, order, custom)
         // and by Ascending or Descending
-        self.sortRows = function(expression) {
-            var reverse = false;
-            expression = expression;
-            if (expression.charAt(0) === '-') {
-                reverse = true;
-                expression = expression.substr(1);
-            }
-
-            var angularOrderBy = $filter('orderBy');
-            if (expression === 'custom') {
-                self.rows = angularOrderBy(self.rows, 'order', reverse);
-            } else {
-                self.rows = angularOrderBy(self.rows, expression, reverse);
-            }
-
-            updateVisibleRows();
+        self.sortRows = function() {
+//            var reverse = false;
+//            expression = expression;
+//            if (expression.charAt(0) === '-') {
+//                reverse = true;
+//                expression = expression.substr(1);
+//            }
+//
+//            var angularOrderBy = $filter('orderBy');
+//            if (expression === 'custom') {
+//                self.rows = angularOrderBy(self.rows, 'order', reverse);
+//            } else {
+//                self.rows = angularOrderBy(self.rows, expression, reverse);
+//            }
+//
+//            updateVisibleRows();
         };
 
         // Adds or updates timespans

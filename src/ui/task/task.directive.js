@@ -196,7 +196,7 @@ gantt.directive('ganttTask', ['$window', '$document', '$timeout', '$filter', 'ga
                     return $scope.task.row;
                 } else {
                     var visibleRows = [];
-                    angular.forEach($scope.task.row.gantt.rows, function(row) {
+                    angular.forEach($scope.task.row.gantt.filteredRows, function(row) {
                         if (!row.hidden) {
                             visibleRows.push(row);
                         }

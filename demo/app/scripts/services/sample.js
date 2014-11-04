@@ -45,14 +45,14 @@ angular.module('angularGanttDemoApp')
                             {'id': '30b8f544-5a45-4357-9a72-dd0181fba49f', 'name': 'Finalize concept', 'color': '#F1C232', 'from': new Date(2013, 9, 17, 8, 0, 0), 'to': new Date(2013, 9, 18, 18, 0, 0),
                                 'progress': 100}
                         ]},
-                        {'id': 'b5318fd9-5d70-4eb1-9c05-65647b9aefe6', 'name': 'Sprint 1', 'order': 5, 'tasks': [
+                        {'id': 'b5318fd9-5d70-4eb1-9c05-65647b9aefe6','group':'team1', 'name': 'Sprint 1', 'order': 5, 'tasks': [
                             {'id': 'd1fdf100-534c-4198-afb9-7bcaef0696f0', 'name': 'Product list view', 'color': '#F1C232', 'from': new Date(2013, 9, 21, 8, 0, 0), 'to': new Date(2013, 9, 25, 15, 0, 0),
                                 'progress': 25}
                         ]},
-                        {'id': 'cfb29cd5-1737-4027-9778-bb3058fbed9c', 'name': 'Sprint 2', 'order': 6, 'tasks': [
+                        {'id': 'cfb29cd5-1737-4027-9778-bb3058fbed9c','group':'team1', 'name': 'Sprint 2', 'order': 6, 'tasks': [
                             {'id': '57638ba3-dfff-476d-ab9a-30fda1e44b50', 'name': 'Order basket', 'color': '#F1C232', 'from': new Date(2013, 9, 28, 8, 0, 0), 'to': new Date(2013, 10, 1, 15, 0, 0)}
                         ]},
-                        {'id': 'df9bb83f-e9de-4cbe-944e-36aec6db53cc', 'name': 'Sprint 3', 'order': 7, 'tasks': [
+                        {'id': 'df9bb83f-e9de-4cbe-944e-36aec6db53cc','group':'team1', 'name': 'Sprint 3', 'order': 7, 'tasks': [
                             {'id': '192adc6e-ab17-4cd1-82d8-4a5e7525b169', 'name': 'Checkout', 'color': '#F1C232', 'from': new Date(2013, 10, 4, 8, 0, 0), 'to': new Date(2013, 10, 8, 15, 0, 0)}
                         ]},
                         {'id': '48cbc052-1fd5-4262-a05f-97dad7337876', 'name': 'Sprint 4', 'order': 8, 'tasks': [
